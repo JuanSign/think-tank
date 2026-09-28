@@ -4,6 +4,20 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<link
+			rel="preload"
+			href="/fonts/bricolage-grotesque.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<script>
+			addEventListener(
+				'scroll',
+				() => document.documentElement.setAttribute('data-early-scroll', ''),
+				{ once: true, passive: true }
+			);
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
