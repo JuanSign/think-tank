@@ -92,7 +92,9 @@
 				<a class="text-link" href="#facts">Why puzzles help</a>
 			</div>
 		</div>
-		<AnimatedBoard variant={data.board} delay={TYPED_BY + 400} />
+		<div class="hero-board">
+			<AnimatedBoard variant={data.board} delay={TYPED_BY + 400} />
+		</div>
 	</div>
 </section>
 
@@ -194,17 +196,38 @@
 
 	.hero-inner {
 		display: grid;
-		gap: clamp(3rem, 8vw, 5rem);
-		align-items: center;
+		grid-template-areas: 'headline' 'lede' 'board' 'actions';
+	}
+
+	.hero-text {
+		display: contents;
+	}
+
+	.hero-board {
+		grid-area: board;
+		justify-self: start;
+		width: min(100%, 16rem, 30svh);
+		margin-top: 2rem;
 	}
 
 	@media (min-width: 56rem) {
 		.hero-inner {
 			grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+			grid-template-rows: 1fr auto auto auto 1fr;
+			grid-template-areas: '. board' 'headline board' 'lede board' 'actions board' '. board';
+			column-gap: clamp(3rem, 8vw, 5rem);
+		}
+
+		.hero-board {
+			align-self: center;
+			justify-self: stretch;
+			width: auto;
+			margin-top: 0;
 		}
 	}
 
 	h1 {
+		grid-area: headline;
 		max-width: 11ch;
 		font-size: min(var(--step-4), 11svh);
 		line-height: 0.96;
@@ -229,6 +252,7 @@
 	}
 
 	.lede {
+		grid-area: lede;
 		max-width: 30rem;
 		margin-top: 1.5rem;
 		color: var(--ink-soft);
@@ -237,6 +261,7 @@
 	}
 
 	.actions {
+		grid-area: actions;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;

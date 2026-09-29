@@ -164,6 +164,7 @@
 	.board {
 		display: grid;
 		grid-template-columns: repeat(var(--cols), 1fr);
+		align-items: stretch;
 		gap: clamp(3px, 0.7vw, 5px);
 		width: min(100%, 27rem, 68svh);
 		aspect-ratio: 1;
