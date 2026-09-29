@@ -2,6 +2,7 @@
 	import { READING, story } from '$lib/attachments/story';
 	import { typeOnce } from '$lib/attachments/type-once';
 	import AnimatedBoard from '$lib/components/AnimatedBoard.svelte';
+	import Crown from '$lib/components/Crown.svelte';
 	import RecoveryChart, { enterRecovery } from '$lib/components/RecoveryChart.svelte';
 	import ScreenTimeChart, { enterScreenTime } from '$lib/components/ScreenTimeChart.svelte';
 	import WanderingChart, { enterWandering } from '$lib/components/WanderingChart.svelte';
@@ -171,8 +172,7 @@
 								<span style:background="var(--region-{queensRegion[letter]})">
 									{#if queensColumn[r] === c}
 										<svg viewBox="0 0 24 24">
-											<path d="M3.2 8.2 7.6 11.6 12 4.6l4.4 7 4.4-3.4-1.9 9.3H5.1z" />
-											<rect x="5.1" y="18.6" width="13.8" height="2.2" rx="1.1" />
+											<Crown />
 										</svg>
 									{/if}
 								</span>

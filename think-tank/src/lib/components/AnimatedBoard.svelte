@@ -4,6 +4,7 @@
 
 <script lang="ts">
 	import { MediaQuery } from 'svelte/reactivity';
+	import Crown from './Crown.svelte';
 
 	let {
 		variant = 'queens',
@@ -147,8 +148,7 @@
 			>
 				{#if tile.queen}
 					<svg class="mark queen" style:--delay="{tile.markDelay}ms" viewBox="0 0 24 24">
-						<path d="M3.2 8.2 7.6 11.6 12 4.6l4.4 7 4.4-3.4-1.9 9.3H5.1z" />
-						<rect x="5.1" y="18.6" width="13.8" height="2.2" rx="1.1" />
+						<Crown />
 					</svg>
 				{:else if tile.digit}
 					<span class="mark digit" class:given={tile.given} style:--delay="{tile.markDelay}ms">
