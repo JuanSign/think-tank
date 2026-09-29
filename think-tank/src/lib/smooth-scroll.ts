@@ -3,18 +3,21 @@ import 'lenis/dist/lenis.css';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const REST_DELAY = 700;
-const REACH_AHEAD = 0.20;
-const REACH_BEHIND = 0.1;
+const REST_DELAY = 350;
+const REACH_AHEAD = 0.1;
+const MAX_OVERSHOOT = 0.4;
+const SETTLE_DURATION = 0.7;
 const OTHER_INPUT = ['keydown', 'pointerdown', 'touchstart'] as const;
 
 const restingPoints = new Set<() => number>();
+const sectionStarts = new Set<() => number>();
 
 export function restAt(point: () => number) {
-	restingPoints.add(point);
-	return () => {
-		restingPoints.delete(point);
-	};
+	return register(restingPoints, point);
+}
+
+export function sectionStartsAt(point: () => number) {
+	return register(sectionStarts, point);
 }
 
 export function smoothScroll() {
@@ -57,18 +60,33 @@ export function smoothScroll() {
 
 function settle(lenis: Lenis) {
 	const from = lenis.targetScroll;
-	let target: number | undefined;
-	let nearest = Infinity;
+	const points = [...restingPoints].map((point) => point());
 
-	for (const point of restingPoints) {
-		const at = point();
-		const distance = Math.abs(at - from);
-		const reach = innerHeight * (at >= from ? REACH_AHEAD : REACH_BEHIND);
-		if (distance <= reach && distance < nearest) {
-			target = at;
-			nearest = distance;
-		}
-	}
+	const next = Math.min(...points.filter((at) => at > from));
+	if (next - from <= innerHeight * REACH_AHEAD) return glide(lenis, next);
 
-	if (target !== undefined && nearest > 1) lenis.scrollTo(target);
+	const rest = Math.max(...points.filter((at) => at < from));
+	const overshoot = from - rest;
+	if (overshoot < 1 || overshoot > innerHeight * MAX_OVERSHOOT) return;
+
+	const movedOn = [...sectionStarts].some((start) => {
+		const at = start();
+		return at > rest && at <= from;
+	});
+	if (!movedOn) glide(lenis, rest);
+}
+
+function glide(lenis: Lenis, target: number) {
+	lenis.scrollTo(target, { duration: SETTLE_DURATION, easing: easeOutCubic });
+}
+
+function easeOutCubic(t: number) {
+	return 1 - (1 - t) ** 3;
+}
+
+function register(points: Set<() => number>, point: () => number) {
+	points.add(point);
+	return () => {
+		points.delete(point);
+	};
 }

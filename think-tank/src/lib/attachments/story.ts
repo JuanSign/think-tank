@@ -1,7 +1,7 @@
 import type { Attachment } from 'svelte/attachments';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { restAt } from '$lib/smooth-scroll';
+import { restAt, sectionStartsAt } from '$lib/smooth-scroll';
 import type { Typed, TypedStory } from '$lib/typing';
 
 export type ChartEntrance = (timeline: gsap.core.Timeline, figure: HTMLElement) => void;
@@ -141,9 +141,11 @@ export function story(
 				}
 
 				const stopResting = restAt(() => complete() + innerHeight * REST_PAST);
+				const stopStarting = sectionStartsAt(() => typingTitle.scrollTrigger!.start);
 
 				return () => {
 					stopResting();
+					stopStarting();
 					delete text.dataset.typing;
 					for (const char of chars) {
 						char.removeAttribute('data-typed');
