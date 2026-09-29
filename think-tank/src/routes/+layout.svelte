@@ -1,6 +1,9 @@
 <script lang="ts">
 	import '../app.css';
+	import { onNavigate } from '$app/navigation';
+	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
+	import { isPuzzleRoute, portal } from '$lib/portal';
 	import type { LayoutProps } from './$types';
 
 	type PeekKey = 'home' | 'puzzles' | 'facts';
@@ -24,6 +27,9 @@
 
 	let compact = $derived(scrollY > COMPACT_AFTER);
 	let peek = $derived(hovered ?? focused);
+	let inPuzzle = $derived(isPuzzleRoute(page.url.pathname));
+
+	onNavigate(portal);
 
 	$effect(() => {
 		let frame = requestAnimationFrame(() => {
@@ -125,51 +131,57 @@
 
 <a class="skip-link" href="#main">Skip to content</a>
 
-<header id="home" class="site-header">
-	<div
-		class="bar"
-		class:compact
-		class:ready
-		class:peeking={peek !== null}
-		style:--peek-width="{peek ? labelWidth[peek] : 0}px"
-	>
-		<a
-			class="brand"
-			class:peek={peek === 'home'}
-			href={compact ? '#home' : '/'}
-			aria-label={compact ? 'Home, back to top' : undefined}
-			{...peekable('home')}
+{#if !inPuzzle}
+	<header id="home" class="site-header">
+		<div
+			class="bar"
+			class:compact
+			class:ready
+			class:peeking={peek !== null}
+			style:--peek-width="{peek ? labelWidth[peek] : 0}px"
 		>
-			<span class="mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-			<span class="fold brand-name"><span>Think Tank</span></span>
-			<span class="fold label" aria-hidden="true">
-				<span bind:clientWidth={labelWidth.home}>Home</span>
-			</span>
-		</a>
+			<a
+				class="brand"
+				class:peek={peek === 'home'}
+				href={compact ? '#home' : '/'}
+				aria-label={compact ? 'Home, back to top' : undefined}
+				{...peekable('home')}
+			>
+				<span class="mark" aria-hidden="true"
+					><span></span><span></span><span></span><span></span></span
+				>
+				<span class="fold brand-name"><span>Think Tank</span></span>
+				<span class="fold label" aria-hidden="true">
+					<span bind:clientWidth={labelWidth.home}>Home</span>
+				</span>
+			</a>
 
-		<span class="divider" aria-hidden="true"></span>
+			<span class="divider" aria-hidden="true"></span>
 
-		<nav aria-label="Main">
-			{#each links as link (link.key)}
-				<a href={link.href} class:peek={peek === link.key} {...peekable(link.key)}>
-					<span class="fold icon" aria-hidden="true">{@render link.icon()}</span>
-					<span class="fold label">
-						<span bind:clientWidth={labelWidth[link.key]}>{link.label}</span>
-					</span>
-				</a>
-			{/each}
-		</nav>
-	</div>
-</header>
+			<nav aria-label="Main">
+				{#each links as link (link.key)}
+					<a href={link.href} class:peek={peek === link.key} {...peekable(link.key)}>
+						<span class="fold icon" aria-hidden="true">{@render link.icon()}</span>
+						<span class="fold label">
+							<span bind:clientWidth={labelWidth[link.key]}>{link.label}</span>
+						</span>
+					</a>
+				{/each}
+			</nav>
+		</div>
+	</header>
+{/if}
 
 <main id="main">
 	{@render children()}
 </main>
 
-<footer class="container site-footer">
-	<span>Think Tank</span>
-	<span>© {new Date().getFullYear()} think-tank.co</span>
-</footer>
+{#if !inPuzzle}
+	<footer class="container site-footer">
+		<span>Think Tank</span>
+		<span>© {new Date().getFullYear()} think-tank.co</span>
+	</footer>
+{/if}
 
 <style>
 	.skip-link {

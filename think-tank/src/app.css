@@ -189,6 +189,21 @@ a {
 	padding-inline: var(--gutter);
 }
 
+.cell-grid {
+	--gap-ratio: 0.1;
+	--radius-ratio: 0.16;
+	--cell: calc(100cqi / (var(--n) + (var(--n) - 1) * var(--gap-ratio)));
+
+	display: grid;
+	grid-template-columns: repeat(var(--n), 1fr);
+	gap: calc(var(--cell) * var(--gap-ratio));
+}
+
+.cell-grid > * {
+	aspect-ratio: 1;
+	border-radius: calc(var(--cell) * var(--radius-ratio));
+}
+
 .text-link {
 	font-weight: 600;
 	color: var(--ink);
@@ -251,6 +266,103 @@ a {
 	clip-path: inset(50%);
 	white-space: nowrap;
 	border: 0;
+}
+
+:root {
+	--portal-duration: 750ms;
+	--portal-ease: cubic-bezier(0.76, 0, 0.24, 1);
+	--portal-window: inset(
+		var(--portal-top) calc(100% - var(--portal-left) - var(--portal-width))
+			calc(100% - var(--portal-top) - var(--portal-height)) var(--portal-left) round
+			var(--radius-l)
+	);
+}
+
+:root[data-portal]::view-transition-group(*) {
+	animation-duration: var(--portal-duration);
+	animation-timing-function: var(--portal-ease);
+}
+
+:root[data-portal]::view-transition-old(portal-seed),
+:root[data-portal]::view-transition-new(portal-seed) {
+	mix-blend-mode: normal;
+}
+
+:root[data-portal='in']::view-transition-old(portal-seed) {
+	z-index: 1;
+	animation: portal-fade-out 350ms ease-out both;
+}
+
+:root[data-portal='in']::view-transition-new(portal-seed),
+:root[data-portal='out']::view-transition-old(portal-seed) {
+	animation: none;
+}
+
+:root[data-portal='out']::view-transition-new(portal-seed) {
+	animation: portal-fade-in 350ms ease-in 350ms both;
+}
+
+:root[data-portal='in']::view-transition-old(root) {
+	transform-origin: var(--portal-x) var(--portal-y);
+	animation: portal-fall-away var(--portal-duration) var(--portal-ease) both;
+}
+
+:root[data-portal='in']::view-transition-new(root) {
+	animation: portal-open var(--portal-duration) var(--portal-ease) both;
+}
+
+:root[data-portal='out']::view-transition-old(root) {
+	z-index: 1;
+	animation: portal-close var(--portal-duration) var(--portal-ease) both;
+}
+
+:root[data-portal='out']::view-transition-new(root) {
+	transform-origin: var(--portal-x) var(--portal-y);
+	animation: portal-come-back var(--portal-duration) var(--portal-ease) both;
+}
+
+@keyframes portal-open {
+	from {
+		clip-path: var(--portal-window);
+	}
+	to {
+		clip-path: inset(0px 0px 0px 0px round 0px);
+	}
+}
+
+@keyframes portal-close {
+	from {
+		clip-path: inset(0px 0px 0px 0px round 0px);
+	}
+	to {
+		clip-path: var(--portal-window);
+	}
+}
+
+@keyframes portal-fall-away {
+	to {
+		opacity: 0;
+		transform: scale(1.3);
+	}
+}
+
+@keyframes portal-come-back {
+	from {
+		opacity: 0;
+		transform: scale(1.3);
+	}
+}
+
+@keyframes portal-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes portal-fade-in {
+	from {
+		opacity: 0;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

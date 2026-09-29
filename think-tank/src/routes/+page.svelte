@@ -137,7 +137,7 @@
 	id="puzzles"
 	class="container puzzles"
 	style:--cards-at="{typedPuzzlesTitle.end}ms"
-	{@attach typeOnce()}
+	{@attach typeOnce('puzzles')}
 >
 	<div class="section-head">
 		<h2>{@render typed(puzzlesTitle, typedPuzzlesTitle, false)}</h2>
@@ -151,10 +151,12 @@
 		<li style:--i={0}>
 			<a class="puzzle" href="/sudoku">
 				<div class="plate">
-					<div class="mini mini-sudoku" aria-hidden="true">
-						{#each sudokuCells as digit, i (i)}
-							<span class:selected={i === 5}>{digit}</span>
-						{/each}
+					<div class="mini" aria-hidden="true">
+						<div class="cell-grid mini-sudoku" style:--n={3}>
+							{#each sudokuCells as digit, i (i)}
+								<span class:selected={i === 5}>{digit}</span>
+							{/each}
+						</div>
 					</div>
 				</div>
 				<h3>Sudoku</h3>
@@ -166,18 +168,20 @@
 		<li style:--i={1}>
 			<a class="puzzle" href="/queens">
 				<div class="plate">
-					<div class="mini mini-queens" aria-hidden="true">
-						{#each queensLayout as row, r (r)}
-							{#each [...row] as letter, c (c)}
-								<span style:background="var(--region-{queensRegion[letter]})">
-									{#if queensColumn[r] === c}
-										<svg viewBox="0 0 24 24">
-											<Crown />
-										</svg>
-									{/if}
-								</span>
+					<div class="mini" aria-hidden="true">
+						<div class="cell-grid mini-queens" style:--n={4}>
+							{#each queensLayout as row, r (r)}
+								{#each [...row] as letter, c (c)}
+									<span style:background="var(--region-{queensRegion[letter]})">
+										{#if queensColumn[r] === c}
+											<svg viewBox="0 0 24 24">
+												<Crown />
+											</svg>
+										{/if}
+									</span>
+								{/each}
 							{/each}
-						{/each}
+						</div>
 					</div>
 				</div>
 				<h3>Queens</h3>
@@ -188,10 +192,12 @@
 
 		<li class="puzzle soon" style:--i={2}>
 			<div class="plate">
-				<div class="mini mini-empty" aria-hidden="true">
-					{#each emptyCells as cell (cell)}
-						<span></span>
-					{/each}
+				<div class="mini" aria-hidden="true">
+					<div class="cell-grid mini-empty" style:--n={3}>
+						{#each emptyCells as cell (cell)}
+							<span></span>
+						{/each}
+					</div>
 				</div>
 			</div>
 			<h3>More on the way</h3>
@@ -497,7 +503,7 @@
 	}
 
 	.mini {
-		display: grid;
+		container-type: inline-size;
 		width: 44%;
 	}
 
@@ -505,38 +511,22 @@
 		display: grid;
 		align-content: center;
 		place-items: center;
-		aspect-ratio: 1;
-	}
-
-	.mini-sudoku {
-		grid-template-columns: repeat(3, 1fr);
-		gap: 4px;
 	}
 
 	.mini-sudoku span {
-		border-radius: var(--radius-s);
 		background: var(--surface);
-		font-size: clamp(1.125rem, 2vw, 1.5rem);
+		font-size: calc(var(--cell) * 0.5);
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 		line-height: 1;
 	}
 
 	.mini-sudoku .selected {
-		box-shadow: inset 0 0 0 2.5px var(--accent);
+		box-shadow: inset 0 0 0 calc(var(--cell) * 0.07) var(--accent);
 	}
 
 	a.puzzle:hover .mini-sudoku .selected {
 		background: var(--accent);
-	}
-
-	.mini-queens {
-		grid-template-columns: repeat(4, 1fr);
-		gap: 3px;
-	}
-
-	.mini-queens span {
-		border-radius: 5px;
 	}
 
 	.mini-queens svg {
@@ -544,14 +534,8 @@
 		fill: var(--queen);
 	}
 
-	.mini-empty {
-		grid-template-columns: repeat(3, 1fr);
-		gap: 6px;
-	}
-
 	.mini-empty span {
 		border: 2px dashed var(--line);
-		border-radius: var(--radius-s);
 	}
 
 	@keyframes type-in {
