@@ -1,24 +1,38 @@
 <script lang="ts">
-	import { reveal } from '$lib/attachments/reveal';
+	import { READING, story } from '$lib/attachments/story';
 	import AnimatedBoard from '$lib/components/AnimatedBoard.svelte';
+	import RecoveryChart, { enterRecovery } from '$lib/components/RecoveryChart.svelte';
+	import ScreenTimeChart, { enterScreenTime } from '$lib/components/ScreenTimeChart.svelte';
+	import WanderingChart, { enterWandering } from '$lib/components/WanderingChart.svelte';
+	import { smoothScroll } from '$lib/smooth-scroll';
+	import { typeOut, typeStory, type Typed } from '$lib/typing';
 	import type { PageProps } from './$types';
 
-	type Letter = { char: string; at: number; hold: number };
+	type Beat = ReturnType<typeof beat>;
 
 	let { data }: PageProps = $props();
 
+	$effect(smoothScroll);
+
 	const TYPING_STARTS = 250;
-	const WORD_PAUSE = 70;
 
 	const headline = 'Put your attention back together.';
-	const factsTitle = 'Built for focus in a distracted world.';
-	const puzzlesTitle = 'Choose a puzzle.';
+	const typedHeadline = typeOut(headline, TYPING_STARTS);
+	const TYPED_BY = typedHeadline.end;
 
-	const screenTime = [
-		{ period: '2004', seconds: 150, label: '2½ min' },
-		{ period: '2012', seconds: 75, label: '75 sec' },
-		{ period: '2016-21', seconds: 47, label: '47 sec' }
-	];
+	const switching = beat('Built for focus in a distracted world.', [
+		'Most of the internet is built to break your focus. It rewards the endless scroll and trains us to move on before we’ve even started.'
+	]);
+	const recovery = beat('Every switch has a cost.', [
+		'An interruption lasts seconds. Getting back to what you were doing takes far longer, usually after a detour through two other tasks.'
+	]);
+	const wandering = beat('Even without a ping, we drift.', [
+		'Not every distraction is a notification. Left alone, our minds wander for almost half of our waking hours, and we tend to feel less happy when they do.'
+	]);
+	const closing = beat('A logic puzzle asks for something different.', [
+		'One challenge, clear rules, and zero shortcuts. You hold an idea in your mind, test it, learn from a mistake, and persist until the solution snaps into place.',
+		'It’s a quiet space to rebuild the focus that the rest of the web strips away.'
+	]);
 
 	const sudokuCells = ['5', '', '3', '', '7', '', '8', '', '1'];
 	const queensLayout = ['AABB', 'CAAB', 'CCDD', 'CDDD'];
@@ -26,33 +40,36 @@
 	const queensRegion: Record<string, number> = { A: 2, B: 1, C: 3, D: 4 };
 	const emptyCells = Array.from({ length: 9 }, (_, i) => i);
 
-	function typeOut(text: string) {
-		const words: Letter[][] = [];
-		let clock = TYPING_STARTS;
-		let n = 0;
-
-		for (const word of text.split(' ')) {
-			const letters: Letter[] = [];
-			for (const char of word) {
-				const step = 30 + ((n++ * 17) % 31);
-				letters.push({ char, at: clock, hold: step });
-				clock += step;
-			}
-			letters[letters.length - 1].hold += WORD_PAUSE;
-			clock += WORD_PAUSE;
-			words.push(letters);
-		}
-
-		return { words, end: clock };
+	function beat(title: string, paragraphs: string[]) {
+		return { title, paragraphs, typedStory: typeStory(title, paragraphs) };
 	}
-
-	const { words: typedWords, end: TYPED_BY } = typeOut(headline);
 </script>
 
-{#snippet risingWords(text: string)}
-	{#each text.split(' ') as word, i (i)}
-		<span class="rise" style:--delay="{i * 90}ms">{word}</span>{' '}
-	{/each}
+{#snippet typed(text: string, { words }: Typed)}
+	<span class="visually-hidden">{text}</span>
+	<span aria-hidden="true">
+		{#each words as word, w (w)}
+			<span class="word"
+				>{#each word as letter, l (l)}<span
+						class="char"
+						class:last={w === words.length - 1 && l === word.length - 1}
+						style:--at="{letter.at}ms"
+						style:--hold="{letter.hold}ms">{letter.char}</span
+					>{/each}</span
+			>{' '}
+		{/each}
+	</span>
+{/snippet}
+
+{#snippet beatText({ title, paragraphs, typedStory }: Beat, level: 'h2' | 'h3')}
+	<div class="beat-text">
+		<svelte:element this={level} class="beat-title">
+			{@render typed(title, typedStory.title)}
+		</svelte:element>
+		{#each paragraphs as paragraph, i (i)}
+			<p>{@render typed(paragraph, typedStory.body.blocks[i])}</p>
+		{/each}
+	</div>
 {/snippet}
 
 <svelte:head>
@@ -67,19 +84,7 @@
 	<div class="container hero-inner">
 		<div class="hero-text">
 			<h1>
-				<span class="visually-hidden">{headline}</span>
-				<span aria-hidden="true">
-					{#each typedWords as word, w (w)}
-						<span class="word"
-							>{#each word as letter, l (l)}<span
-									class="char"
-									class:last={w === typedWords.length - 1 && l === word.length - 1}
-									style:--at="{letter.at}ms"
-									style:--hold="{letter.hold}ms">{letter.char}</span
-								>{/each}</span
-						>{' '}
-					{/each}
-				</span>
+				{@render typed(headline, typedHeadline)}
 			</h1>
 			<p class="lede">The world is built to distract you.<br />Learn to focus anyway.</p>
 			<div class="actions">
@@ -92,60 +97,45 @@
 </section>
 
 <section id="facts" class="container facts">
-	<div class="facts-text" {@attach reveal()}>
-		<h2>
-			{@render risingWords(factsTitle)}
-		</h2>
-		<p class="rise" style:--delay="500ms">
-			Most of the internet is built to break your focus. It rewards the endless scroll and trains
-			us to move on before we’ve even started.
-		</p>
-		<p class="rise" style:--delay="700ms">
-			A logic puzzle asks for something different. One challenge, clear rules, and zero
-			shortcuts. You hold an idea in your mind, test it, learn from a mistake, and persist until
-			the solution snaps into place.
-		</p>
-		<p class="rise closing" style:--delay="900ms">
-			It’s a quiet space to rebuild the focus that the rest of the web strips away.
-		</p>
+	<div class="beat" {@attach story(switching.typedStory, { enterChart: enterScreenTime })}>
+		{@render beatText(switching, 'h2')}
+		<ScreenTimeChart />
 	</div>
 
-	<figure class="chart" {@attach reveal()}>
-		<figcaption class="rise" style:--delay="150ms">
-			Average time on one screen before switching
-		</figcaption>
-		<ul>
-			{#each screenTime as row, i (row.period)}
-				<li style:--i={i}>
-					<span class="period">{row.period}</span>
-					<span class="track">
-						<span class="bar" style:width="{(row.seconds / 150) * 78}%"></span>
-						<span class="value">{row.label}</span>
-					</span>
-				</li>
-			{/each}
-		</ul>
-		<p class="source">Source: Gloria Mark, <cite>Attention Span</cite> (2023)</p>
-	</figure>
+	<div
+		class="beat flip"
+		{@attach story(recovery.typedStory, { pacing: READING, enterChart: enterRecovery })}
+	>
+		{@render beatText(recovery, 'h3')}
+		<RecoveryChart />
+	</div>
+
+	<div
+		class="beat"
+		{@attach story(wandering.typedStory, { pacing: READING, enterChart: enterWandering })}
+	>
+		{@render beatText(wandering, 'h3')}
+		<WanderingChart />
+	</div>
+
+	<div class="beat closing" {@attach story(closing.typedStory, { pacing: READING })}>
+		{@render beatText(closing, 'h3')}
+	</div>
 </section>
 
 <section id="puzzles" class="container puzzles">
-	<div class="section-head" {@attach reveal()}>
-		<h2>
-			{@render risingWords(puzzlesTitle)}
-		</h2>
-		<p class="rise" style:--delay="300ms">
-			Simple rules, no luck involved.<br />Take as long as you need.
-		</p>
+	<div class="section-head">
+		<h2>Choose a puzzle.</h2>
+		<p>Simple rules, no luck involved.<br />Take as long as you need.</p>
 	</div>
 
 	<ul class="puzzle-list">
-		<li style:--i={0} {@attach reveal()}>
+		<li>
 			<a class="puzzle" href="/sudoku">
 				<div class="plate">
 					<div class="mini mini-sudoku" aria-hidden="true">
 						{#each sudokuCells as digit, i (i)}
-							<span class:selected={i === 5} style:--n={i}>{digit}</span>
+							<span class:selected={i === 5}>{digit}</span>
 						{/each}
 					</div>
 				</div>
@@ -155,15 +145,15 @@
 			</a>
 		</li>
 
-		<li style:--i={1} {@attach reveal()}>
+		<li>
 			<a class="puzzle" href="/queens">
 				<div class="plate">
 					<div class="mini mini-queens" aria-hidden="true">
 						{#each queensLayout as row, r (r)}
 							{#each [...row] as letter, c (c)}
-								<span style:background="var(--region-{queensRegion[letter]})" style:--n={r + c}>
+								<span style:background="var(--region-{queensRegion[letter]})">
 									{#if queensColumn[r] === c}
-										<svg viewBox="0 0 24 24" style:--r={r}>
+										<svg viewBox="0 0 24 24">
 											<path d="M3.2 8.2 7.6 11.6 12 4.6l4.4 7 4.4-3.4-1.9 9.3H5.1z" />
 											<rect x="5.1" y="18.6" width="13.8" height="2.2" rx="1.1" />
 										</svg>
@@ -179,11 +169,11 @@
 			</a>
 		</li>
 
-		<li class="puzzle soon" style:--i={2} {@attach reveal()}>
+		<li class="puzzle soon">
 			<div class="plate">
 				<div class="mini mini-empty" aria-hidden="true">
 					{#each emptyCells as cell (cell)}
-						<span style:--n={cell}></span>
+						<span></span>
 					{/each}
 				</div>
 			</div>
@@ -223,14 +213,16 @@
 
 	.char {
 		--caret: 0.07em 0 0 var(--accent);
+	}
 
+	h1 .char {
 		opacity: 0;
 		animation:
 			type-in 0s var(--at) forwards,
 			caret var(--hold) var(--at);
 	}
 
-	.char.last {
+	h1 .char.last {
 		animation:
 			type-in 0s var(--at) forwards,
 			caret-blink 1s var(--at) 3;
@@ -268,158 +260,80 @@
 		padding-top: var(--section-top);
 	}
 
-	h2 {
+	h2,
+	.beat-title {
 		font-size: var(--step-3);
 		letter-spacing: -0.035em;
 	}
 
-	h2 .rise {
-		display: inline-block;
-	}
-
-	:global([data-reveal='waiting']) .rise {
-		opacity: 0;
-	}
-
-	:global([data-reveal='playing']) .rise {
-		animation: rise 700ms var(--ease-out) calc(var(--offset, 0ms) + var(--delay)) both;
-	}
-
 	.facts {
 		display: grid;
+		gap: clamp(6rem, 10vw, 8rem);
+	}
+
+	.beat {
+		display: grid;
 		gap: clamp(2.5rem, 6vw, 5rem);
-		align-items: center;
+		align-items: start;
 	}
 
 	@media (min-width: 56rem) {
-		.facts {
+		.beat {
 			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		}
+
+		.beat.flip .beat-text {
+			order: 2;
+		}
+
+		.beat.closing {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 
-	.facts-text h2 {
+	.beat-title {
 		max-width: 14ch;
 	}
 
-	.facts-text p {
+	.beat-text p {
 		max-width: 36rem;
 		margin-top: 1.25rem;
 		color: var(--ink-soft);
 	}
 
-	.facts-text h2 + p {
+	.beat-title + p {
 		margin-top: 1.75rem;
 	}
 
-	.facts-text .closing {
+	.closing .beat-text {
+		text-align: center;
+	}
+
+	.closing .beat-title,
+	.closing p {
+		margin-inline: auto;
+	}
+
+	.closing .beat-title {
+		max-width: 24ch;
+	}
+
+	.closing .beat-text p {
+		max-width: 44rem;
+		text-wrap: balance;
+	}
+
+	.closing p:last-child {
 		color: var(--ink);
 		font-weight: 500;
 	}
 
-	.chart {
-		--offset: 0ms;
-
-		padding: clamp(1.5rem, 4vw, 2.25rem);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-l);
-		background: var(--surface);
-	}
-
-	@media (min-width: 56rem) {
-		.chart {
-			--offset: 800ms;
-		}
-	}
-
-	.chart figcaption {
-		font-weight: 600;
-		letter-spacing: -0.01em;
-	}
-
-	.chart ul {
-		display: grid;
-		gap: 0.875rem;
-		margin-top: 1.5rem;
-		padding: 0;
-		list-style: none;
-	}
-
-	.chart li {
-		--bar-starts: calc(var(--offset) + 400ms + var(--i) * 500ms);
-
-		display: grid;
-		grid-template-columns: 4.75rem 1fr;
-		align-items: center;
-	}
-
-	.period {
-		color: var(--ink-soft);
-		font-size: var(--step--1);
-		font-variant-numeric: tabular-nums;
-	}
-
-	.track {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.bar {
-		height: 2.25rem;
-		border-radius: var(--radius-s);
-		background: var(--region-2);
-	}
-
-	.value {
-		font-size: var(--step--1);
-		font-variant-numeric: tabular-nums;
-		white-space: nowrap;
-	}
-
-	.chart li:last-child .bar {
-		background: var(--accent);
-	}
-
-	.chart li:last-child .value {
-		font-weight: 700;
-	}
-
-	.source {
-		margin-top: 1.5rem;
-		color: var(--ink-soft);
-		font-size: var(--step--1);
-	}
-
-	.chart:global([data-reveal='waiting']) {
+	.beat-text:global([data-typing]) .char:not(:global([data-typed])) {
 		opacity: 0;
 	}
 
-	.chart:global([data-reveal='playing']) {
-		animation: rise 700ms var(--ease-out) var(--offset) both;
-	}
-
-	:global([data-reveal='waiting']) .bar {
-		clip-path: inset(0 100% 0 0);
-	}
-
-	:global([data-reveal='waiting']) :is(.value, .source) {
-		opacity: 0;
-	}
-
-	:global([data-reveal='playing']) .bar {
-		animation: grow 850ms var(--ease-out) var(--bar-starts) both;
-	}
-
-	:global([data-reveal='playing']) .value {
-		animation: fade-in 350ms ease-out calc(var(--bar-starts) + 500ms) both;
-	}
-
-	:global([data-reveal='playing']) li:last-child .value {
-		animation: pop 550ms var(--ease-spring) calc(var(--bar-starts) + 500ms) both;
-	}
-
-	:global([data-reveal='playing']) .source {
-		animation: fade-in 500ms ease-out calc(var(--offset) + 2100ms) both;
+	.beat-text .char:global([data-caret]) {
+		animation: caret-blink 1s 3;
 	}
 
 	.puzzles {
@@ -446,11 +360,6 @@
 		gap: 2.5rem clamp(1.25rem, 3vw, 2rem);
 		padding: 0;
 		list-style: none;
-	}
-
-	.puzzle-list > li {
-		--card-delay: calc(250ms + var(--i) * 160ms);
-		--board-delay: calc(var(--card-delay) + 450ms);
 	}
 
 	.puzzle {
@@ -568,31 +477,6 @@
 		border-radius: var(--radius-s);
 	}
 
-	.puzzle-list > li:global([data-reveal='waiting']) {
-		opacity: 0;
-	}
-
-	.puzzle-list > li:global([data-reveal='playing']) {
-		animation: slide-in 850ms var(--ease-out) var(--card-delay) both;
-	}
-
-	:global([data-reveal='playing']) .mini-sudoku span {
-		animation: pop 450ms var(--ease-spring) calc(var(--board-delay) + var(--n) * 55ms) both;
-	}
-
-	:global([data-reveal='playing']) .mini-queens span {
-		animation: fade-in 400ms ease-out calc(var(--board-delay) + var(--n) * 45ms) both;
-	}
-
-	:global([data-reveal='playing']) .mini-queens svg {
-		animation: drop 500ms var(--ease-spring) calc(var(--board-delay) + 450ms + var(--r) * 110ms)
-			both;
-	}
-
-	:global([data-reveal='playing']) .mini-empty span {
-		animation: fade-in 400ms ease-out calc(var(--board-delay) + var(--n) * 60ms) both;
-	}
-
 	@keyframes type-in {
 		to {
 			opacity: 1;
@@ -621,42 +505,6 @@
 		from {
 			opacity: 0;
 			transform: translateY(0.75rem);
-		}
-	}
-
-	@keyframes fade-in {
-		from {
-			opacity: 0;
-		}
-	}
-
-	@keyframes pop {
-		from {
-			opacity: 0;
-			transform: scale(0.6);
-		}
-	}
-
-	@keyframes grow {
-		from {
-			clip-path: inset(0 100% 0 0 round var(--radius-s));
-		}
-		to {
-			clip-path: inset(0 0 0 0 round var(--radius-s));
-		}
-	}
-
-	@keyframes slide-in {
-		from {
-			opacity: 0;
-			transform: translateX(-2.5rem);
-		}
-	}
-
-	@keyframes drop {
-		from {
-			opacity: 0;
-			transform: translateY(-40%) scale(0.6);
 		}
 	}
 </style>
