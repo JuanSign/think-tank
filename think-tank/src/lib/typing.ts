@@ -25,8 +25,7 @@ export function typeOut(text: string, clock = 0): Typed {
 	return { words, end: clock };
 }
 
-export function typeParagraphs(texts: string[]): TypedBlocks {
-	let clock = 0;
+export function typeParagraphs(texts: string[], clock = 0): TypedBlocks {
 	const blocks = texts.map((text) => {
 		const typed = typeOut(text, clock);
 		clock = typed.end + PARAGRAPH_PAUSE;

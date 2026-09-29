@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { READING, story } from '$lib/attachments/story';
+	import { typeOnce } from '$lib/attachments/type-once';
 	import AnimatedBoard from '$lib/components/AnimatedBoard.svelte';
 	import RecoveryChart, { enterRecovery } from '$lib/components/RecoveryChart.svelte';
 	import ScreenTimeChart, { enterScreenTime } from '$lib/components/ScreenTimeChart.svelte';
 	import WanderingChart, { enterWandering } from '$lib/components/WanderingChart.svelte';
 	import { smoothScroll } from '$lib/smooth-scroll';
-	import { typeOut, typeStory, type Typed } from '$lib/typing';
+	import { typeOut, typeParagraphs, typeStory, type Typed } from '$lib/typing';
 	import type { PageProps } from './$types';
 
 	type Beat = ReturnType<typeof beat>;
@@ -15,6 +16,7 @@
 	$effect(smoothScroll);
 
 	const TYPING_STARTS = 250;
+	const LEDE_PAUSE = 300;
 
 	const headline = 'Put your attention back together.';
 	const typedHeadline = typeOut(headline, TYPING_STARTS);
@@ -34,6 +36,11 @@
 		'It’s a quiet space to rebuild the focus that the rest of the web strips away.'
 	]);
 
+	const puzzlesTitle = 'Choose a puzzle.';
+	const puzzlesLede = ['Simple rules, no luck involved.', 'Take as long as you need.'];
+	const typedPuzzlesTitle = typeOut(puzzlesTitle);
+	const typedPuzzlesLede = typeParagraphs(puzzlesLede, typedPuzzlesTitle.end + LEDE_PAUSE);
+
 	const sudokuCells = ['5', '', '3', '', '7', '', '8', '', '1'];
 	const queensLayout = ['AABB', 'CAAB', 'CCDD', 'CDDD'];
 	const queensColumn = [1, 3, 0, 2];
@@ -45,14 +52,14 @@
 	}
 </script>
 
-{#snippet typed(text: string, { words }: Typed)}
+{#snippet typed(text: string, { words }: Typed, final = true)}
 	<span class="visually-hidden">{text}</span>
 	<span aria-hidden="true">
 		{#each words as word, w (w)}
 			<span class="word"
 				>{#each word as letter, l (l)}<span
 						class="char"
-						class:last={w === words.length - 1 && l === word.length - 1}
+						class:last={final && w === words.length - 1 && l === word.length - 1}
 						style:--at="{letter.at}ms"
 						style:--hold="{letter.hold}ms">{letter.char}</span
 					>{/each}</span
@@ -125,14 +132,22 @@
 	</div>
 </section>
 
-<section id="puzzles" class="container puzzles">
+<section
+	id="puzzles"
+	class="container puzzles"
+	style:--cards-at="{typedPuzzlesTitle.end}ms"
+	{@attach typeOnce()}
+>
 	<div class="section-head">
-		<h2>Choose a puzzle.</h2>
-		<p>Simple rules, no luck involved.<br />Take as long as you need.</p>
+		<h2>{@render typed(puzzlesTitle, typedPuzzlesTitle, false)}</h2>
+		<p>
+			{@render typed(puzzlesLede[0], typedPuzzlesLede.blocks[0], false)}<br />
+			{@render typed(puzzlesLede[1], typedPuzzlesLede.blocks[1])}
+		</p>
 	</div>
 
 	<ul class="puzzle-list">
-		<li>
+		<li style:--i={0}>
 			<a class="puzzle" href="/sudoku">
 				<div class="plate">
 					<div class="mini mini-sudoku" aria-hidden="true">
@@ -147,7 +162,7 @@
 			</a>
 		</li>
 
-		<li>
+		<li style:--i={1}>
 			<a class="puzzle" href="/queens">
 				<div class="plate">
 					<div class="mini mini-queens" aria-hidden="true">
@@ -171,7 +186,7 @@
 			</a>
 		</li>
 
-		<li class="puzzle soon">
+		<li class="puzzle soon" style:--i={2}>
 			<div class="plate">
 				<div class="mini mini-empty" aria-hidden="true">
 					{#each emptyCells as cell (cell)}
@@ -238,14 +253,16 @@
 		--caret: 0.07em 0 0 var(--accent);
 	}
 
-	h1 .char {
+	h1 .char,
+	.puzzles:global([data-typing='play']) .char {
 		opacity: 0;
 		animation:
 			type-in 0s var(--at) forwards,
 			caret var(--hold) var(--at);
 	}
 
-	h1 .char.last {
+	h1 .char.last,
+	.puzzles:global([data-typing='play']) .char.last {
 		animation:
 			type-in 0s var(--at) forwards,
 			caret-blink 1s var(--at) 3;
@@ -381,10 +398,25 @@
 
 	.puzzle-list {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-		gap: 2.5rem clamp(1.25rem, 3vw, 2rem);
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1.5rem 1rem;
 		padding: 0;
 		list-style: none;
+	}
+
+	@media (min-width: 40rem) {
+		.puzzle-list {
+			grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+			gap: 2.5rem clamp(1.25rem, 3vw, 2rem);
+		}
+	}
+
+	.puzzles:global([data-typing='waiting']) :is(.char, .puzzle-list > li) {
+		opacity: 0;
+	}
+
+	.puzzles:global([data-typing='play']) .puzzle-list > li {
+		animation: rise 700ms var(--ease-out) calc(var(--cards-at) + var(--i) * 140ms) both;
 	}
 
 	.puzzle {
@@ -445,6 +477,25 @@
 		color: var(--ink-soft);
 	}
 
+	@media (width < 40rem) {
+		.plate {
+			margin-bottom: 0.75rem;
+		}
+
+		.puzzle h3 {
+			font-size: var(--step-1);
+		}
+
+		.puzzle p,
+		.play {
+			display: none;
+		}
+
+		.mini {
+			width: 60%;
+		}
+	}
+
 	.mini {
 		display: grid;
 		width: 44%;
@@ -452,6 +503,7 @@
 
 	.mini span {
 		display: grid;
+		align-content: center;
 		place-items: center;
 		aspect-ratio: 1;
 	}

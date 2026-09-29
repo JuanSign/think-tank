@@ -189,6 +189,7 @@
 
 	.tile {
 		display: grid;
+		align-content: center;
 		place-items: center;
 		border-radius: calc(clamp(4px, 0.9vw, 7px) * 7 / var(--cols));
 		animation: settle 1300ms var(--ease-out) calc(var(--start) + var(--delay)) both;
