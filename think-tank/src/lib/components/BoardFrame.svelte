@@ -15,7 +15,6 @@
 	}
 
 	.board :global(.cell) {
-		aspect-ratio: 1;
 		background: var(--surface);
 	}
 

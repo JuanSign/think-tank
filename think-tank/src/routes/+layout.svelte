@@ -3,6 +3,7 @@
 	import { onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import favicon from '$lib/assets/favicon.svg';
+	import bricolage from '$lib/assets/fonts/bricolage-grotesque.woff2';
 	import { isPuzzleRoute, portal } from '$lib/portal';
 	import type { LayoutProps } from './$types';
 
@@ -125,6 +126,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<link rel="preload" href={bricolage} as="font" type="font/woff2" crossorigin="anonymous" />
 	<meta name="theme-color" content="#f2f6fb" media="(prefers-color-scheme: light)" />
 	<meta name="theme-color" content="#0b1628" media="(prefers-color-scheme: dark)" />
 </svelte:head>
