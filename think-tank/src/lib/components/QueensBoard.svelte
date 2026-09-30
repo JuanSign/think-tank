@@ -132,6 +132,7 @@
 				data-dx={cell.dx}
 				data-dy={cell.dy}
 				data-cell={i}
+				data-piece={regions?.[i]}
 				tabindex={i === focused ? 0 : -1}
 				aria-label={label(cell, i)}
 				onpointerdown={(event) => onpointerdown(event, i)}

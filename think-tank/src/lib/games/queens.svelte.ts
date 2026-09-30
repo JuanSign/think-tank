@@ -10,7 +10,7 @@ export class QueensGame {
 	clock = new Clock();
 	puzzle = $state<QueensPuzzle>();
 	marks = $state<Mark[]>([]);
-	autoCross = $state(false);
+	autoCross = $state(true);
 	hint = $state<QueensHint>();
 	frame = $state(0);
 	loading = $state(false);

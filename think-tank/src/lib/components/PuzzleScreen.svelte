@@ -2,9 +2,10 @@
 	import { untrack, type Snippet } from 'svelte';
 	import { backOut } from 'svelte/easing';
 	import { scale } from 'svelte/transition';
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { enterScreen } from '$lib/attachments/enter-screen';
-	import { fallApart } from '$lib/fall-apart';
+	import { fallApart, riseUp } from '$lib/fall-apart';
 	import type { Clock } from '$lib/games/clock.svelte';
 	import type { Difficulty } from '$lib/puzzles/common';
 	import { revealBoard, type Reveal } from '$lib/reveal';
@@ -35,18 +36,30 @@
 	let clock = $derived(game.clock);
 	let won = $derived(game.won);
 	let screen: HTMLElement;
+	let boardView: HTMLElement;
 	let difficulty = $state<Difficulty>('medium');
 	let arrived = $state(false);
 	let ready = $state(false);
 	let settled = $state(false);
+	let scattered = $state(false);
 	let reveal: Reveal | undefined;
+	let stopTumble = () => {};
 	let ticket = 0;
+	let backIsHome = false;
 
 	let time = $derived(format(clock.seconds));
+
+	afterNavigate((navigation) => {
+		backIsHome =
+			navigation.from?.url.pathname === '/' &&
+			(navigation.type !== 'popstate' || navigation.delta === 1);
+	});
 
 	$effect(() => () => clock.stop());
 
 	$effect(() => () => reveal?.kill());
+
+	$effect(() => () => stopTumble());
 
 	$effect(() => {
 		const level = difficulty;
@@ -54,8 +67,17 @@
 	});
 
 	$effect(() => {
-		if (arrived && ready) (reveal ??= revealBoard(screen)).show();
+		if (arrived && ready) untrack(showBoard);
 	});
+
+	function showBoard() {
+		reveal ??= revealBoard(screen);
+		if (!scattered) return reveal.show();
+		scattered = false;
+		stopTumble();
+		reveal.show(true);
+		stopTumble = riseUp(boardView);
+	}
 
 	async function refresh(level: Difficulty) {
 		const current = ++ticket;
@@ -71,21 +93,21 @@
 
 	function hideBoard() {
 		game.hint = undefined;
-		return reveal?.hide() ?? Promise.resolve();
+		return reveal?.hide(scattered) ?? Promise.resolve();
+	}
+
+	function goBack(event: MouseEvent) {
+		if (!backIsHome || event.button !== 0) return;
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		event.preventDefault();
+		history.back();
 	}
 
 	$effect(() => {
 		if (!won) return;
-		const pieces = [
-			...screen.querySelectorAll<HTMLElement>(
-				'.controls button, .controls li, .status button, .rules'
-			)
-		];
-		const restore = fallApart(pieces, () => (settled = true));
-		return () => {
-			settled = false;
-			restore();
-		};
+		scattered = true;
+		stopTumble = fallApart(boardView, () => (settled = true));
+		return () => (settled = false);
 	});
 
 	function format(total: number) {
@@ -111,7 +133,7 @@
 >
 	<div class="container inner">
 		<header class="bar" data-enter>
-			<a class="back" href="/#puzzles">
+			<a class="back" href="/#puzzles" onclick={goBack}>
 				<Icon name="back" />
 				<span class="back-label">Puzzles</span>
 			</a>
@@ -137,7 +159,13 @@
 
 		<div class="play">
 			<div class="board-slot">
-				<div class="board-view" class:hidden={clock.paused} inert={clock.paused}>
+				<div
+					class="board-view"
+					class:hidden={clock.paused}
+					class:scattered
+					inert={clock.paused}
+					bind:this={boardView}
+				>
 					{@render children()}
 				</div>
 				{#if clock.paused}
@@ -146,25 +174,24 @@
 						<button type="button" class="button" onclick={clock.toggle}>Resume</button>
 					</div>
 				{/if}
+				<div class="again" data-enter>
+					{#if settled}
+						<button
+							type="button"
+							class="button"
+							disabled={!ready}
+							onclick={() => refresh(difficulty)}
+							in:scale={{ start: 0.85, duration: 380, easing: backOut }}
+						>
+							{ready ? 'New Puzzle' : 'Shuffling…'}
+						</button>
+					{/if}
+				</div>
 			</div>
 
 			<aside class="panel" aria-label="Controls">
-				<div class="deck">
-					<div class="controls" inert={won || clock.paused}>
-						{@render controls()}
-					</div>
-					{#if settled}
-						<div class="again" in:scale={{ start: 0.85, duration: 380, easing: backOut }}>
-							<button
-								type="button"
-								class="button"
-								disabled={!ready}
-								onclick={() => refresh(difficulty)}
-							>
-								{ready ? 'New Puzzle' : 'Shuffling…'}
-							</button>
-						</div>
-					{/if}
+				<div class="controls" inert={won || clock.paused}>
+					{@render controls()}
 				</div>
 				<p class="rules" data-enter>{rules}</p>
 			</aside>
@@ -273,6 +300,10 @@
 		visibility: hidden;
 	}
 
+	.board-view.scattered :global([data-seed]) {
+		view-transition-name: none;
+	}
+
 	.cover {
 		position: absolute;
 		inset: 0;
@@ -296,12 +327,6 @@
 		width: min(100%, 36rem);
 	}
 
-	.deck {
-		position: relative;
-		display: grid;
-		gap: inherit;
-	}
-
 	.controls {
 		display: grid;
 		gap: inherit;
@@ -312,6 +337,11 @@
 		inset: 0;
 		display: grid;
 		place-items: center;
+		pointer-events: none;
+	}
+
+	.again > .button {
+		pointer-events: auto;
 	}
 
 	.rules {

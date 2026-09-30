@@ -96,6 +96,7 @@
 								}
 							]}
 							data-cell={cell}
+							data-piece={cell}
 							tabindex={cell === game.selected ? 0 : -1}
 							aria-label={label(cell)}
 							onclick={() => game.select(cell)}
@@ -139,7 +140,11 @@
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 1.2cqi;
 		border-radius: 2cqi;
-		background: color-mix(in srgb, var(--grid-line) calc(var(--merge) * 100%), transparent);
+		background: color-mix(
+			in srgb,
+			var(--grid-line) calc(var(--merge) * var(--assembled, 1) * 100%),
+			transparent
+		);
 	}
 
 	.box {

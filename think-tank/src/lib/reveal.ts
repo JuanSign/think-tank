@@ -20,12 +20,12 @@ export function revealBoard(screen: HTMLElement) {
 		.to(board, { '--merge': 1, duration: 0.45, ease: 'power3.inOut' }, '-=0.2');
 
 	return {
-		show() {
-			if (still) timeline.progress(1);
+		show(instant = false) {
+			if (instant || still) timeline.progress(1);
 			else timeline.timeScale(1).play();
 		},
-		hide() {
-			if (still || timeline.progress() === 0) {
+		hide(instant = false) {
+			if (instant || still || timeline.progress() === 0) {
 				timeline.pause(0);
 				return Promise.resolve();
 			}
