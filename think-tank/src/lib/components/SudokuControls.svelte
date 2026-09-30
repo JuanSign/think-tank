@@ -6,6 +6,8 @@
 
 	const digits = Array.from({ length: 9 }, (_, i) => i + 1);
 
+	let stage = $derived(game.hintStage);
+
 	let spoken = $derived.by(() => {
 		const hint = game.hint;
 		if (!hint) return '';
@@ -25,7 +27,13 @@
 		pressed={game.noting}
 		onclick={() => (game.noting = !game.noting)}
 	/>
-	<ToolButton icon="hint" label="Hint" onclick={() => game.showHint()} />
+	<ToolButton
+		icon="hint"
+		label="Hint"
+		badge={stage && `${stage.at}/${stage.of}`}
+		beckon={!!stage && stage.at < stage.of}
+		onclick={() => game.showHint()}
+	/>
 </div>
 
 <div class="pad" role="group" aria-label="Numbers" data-enter>

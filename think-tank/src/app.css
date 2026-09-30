@@ -22,6 +22,10 @@
 	--danger: #cf3a3a;
 	--hint: #a86d00;
 	--queen: #10233f;
+	--highlight-peer: 18%;
+	--highlight-same: 32%;
+	--highlight-selected: 42%;
+	--grid-line: #c2d0e4;
 
 	--region-1: #cde4f8;
 	--region-2: #9cc3f0;
@@ -80,6 +84,10 @@
 		--danger: #ff8a8a;
 		--hint: #f2c14e;
 		--queen: #eef4fc;
+		--highlight-peer: 10%;
+		--highlight-same: 22%;
+		--highlight-selected: 30%;
+		--grid-line: #10203a;
 
 		--region-1: #1d3a5e;
 		--region-2: #2b5796;
@@ -115,6 +123,10 @@
 	--danger: #ff8a8a;
 	--hint: #f2c14e;
 	--queen: #eef4fc;
+	--highlight-peer: 10%;
+	--highlight-same: 22%;
+	--highlight-selected: 30%;
+	--grid-line: #10203a;
 
 	--region-1: #1d3a5e;
 	--region-2: #2b5796;

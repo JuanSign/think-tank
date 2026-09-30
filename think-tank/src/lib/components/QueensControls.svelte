@@ -6,6 +6,7 @@
 	let { game }: { game: QueensGame } = $props();
 
 	let hint = $derived(game.hint);
+	let stage = $derived(game.hintStage);
 	let spoken = $derived(!hint ? '' : hint.kind === 'mistake' ? hint.message : hint.step.message);
 </script>
 
@@ -18,7 +19,13 @@
 		pressed={game.autoCross}
 		onclick={() => (game.autoCross = !game.autoCross)}
 	/>
-	<ToolButton icon="hint" label="Hint" onclick={() => game.showHint()} />
+	<ToolButton
+		icon="hint"
+		label="Hint"
+		badge={stage && `${stage.at}/${stage.of}`}
+		beckon={!!stage && stage.at < stage.of}
+		onclick={() => game.showHint()}
+	/>
 </div>
 
 <ul class="legend" aria-label="How to play" data-enter>

@@ -5,22 +5,28 @@
 		icon,
 		label,
 		pressed,
+		badge,
+		beckon = false,
 		disabled = false,
 		onclick
 	}: {
 		icon: IconName;
 		label: string;
 		pressed?: boolean;
+		badge?: string;
+		beckon?: boolean;
 		disabled?: boolean;
 		onclick?: () => void;
 	} = $props();
+
+	let tag = $derived(badge ?? (pressed === undefined ? undefined : pressed ? 'On' : 'Off'));
 </script>
 
-<button type="button" class="tool" aria-pressed={pressed} {disabled} {onclick}>
+<button type="button" class="tool" class:beckon aria-pressed={pressed} {disabled} {onclick}>
 	<Icon name={icon} />
 	<span>{label}</span>
-	{#if pressed !== undefined}
-		<span class="state" aria-hidden="true">{pressed ? 'On' : 'Off'}</span>
+	{#if tag}
+		<span class="state" aria-hidden="true">{tag}</span>
 	{/if}
 </button>
 
@@ -54,8 +60,13 @@
 		cursor: default;
 	}
 
-	.tool[aria-pressed='true'] {
+	.tool[aria-pressed='true'],
+	.tool.beckon {
 		color: var(--accent);
+	}
+
+	.tool.beckon {
+		animation: nudge 1.2s ease-in-out infinite;
 	}
 
 	.state {
@@ -68,8 +79,20 @@
 		color: var(--ink-soft);
 		font-size: 0.625rem;
 		font-weight: 700;
+		font-variant-numeric: tabular-nums;
 		letter-spacing: 0.02em;
 		line-height: 1.5;
 		text-transform: uppercase;
+	}
+
+	.beckon .state {
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	@keyframes nudge {
+		50% {
+			background: var(--accent-soft);
+		}
 	}
 </style>

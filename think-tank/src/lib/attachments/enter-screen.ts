@@ -5,7 +5,9 @@ import { onPortalExit, takeEntry } from '$lib/portal';
 const SIDE_TRAVEL = 60;
 const EXIT_SPEED = 2;
 
-export function enterScreen(puzzle: string): Attachment<HTMLElement> {
+type Hooks = { onarrive: () => void; beforeexit: () => Promise<void> };
+
+export function enterScreen(puzzle: string, { onarrive, beforeexit }: Hooks): Attachment<HTMLElement> {
 	return (screen) => {
 		const board = screen.querySelector<HTMLElement>('.board')!;
 		const seed = board.querySelector<HTMLElement>('[data-seed]')!;
@@ -16,7 +18,7 @@ export function enterScreen(puzzle: string): Attachment<HTMLElement> {
 		let stopExit = () => {};
 
 		mm.add('(prefers-reduced-motion: no-preference)', () => {
-			const timeline = gsap.timeline({ paused: true });
+			const timeline = gsap.timeline({ paused: true, onComplete: onarrive });
 
 			if (entry) {
 				const { origin, ...offset } = fromSeed(board, seed, entry.seed);
@@ -33,7 +35,8 @@ export function enterScreen(puzzle: string): Attachment<HTMLElement> {
 						yPercent: (_, side: HTMLElement) => Number(side.dataset.dy) * SIDE_TRAVEL,
 						duration: 0.55,
 						ease: 'power3.out',
-						stagger: 0.03
+						stagger: 0.03,
+						clearProps: 'transform,opacity'
 					},
 					entry ? 0.35 : 0
 				)
@@ -47,14 +50,17 @@ export function enterScreen(puzzle: string): Attachment<HTMLElement> {
 			if (entry) entry.ready.then(play);
 			else play();
 
-			stopExit = onPortalExit(() => {
-				if (timeline.progress() === 0) return Promise.resolve();
-				return new Promise((resolve) => {
+			stopExit = onPortalExit(async () => {
+				await beforeexit();
+				if (timeline.progress() === 0) return;
+				await new Promise<void>((resolve) => {
 					timeline.eventCallback('onReverseComplete', () => resolve());
 					timeline.timeScale(EXIT_SPEED).reverse();
 				});
 			});
 		});
+
+		mm.add('(prefers-reduced-motion: reduce)', onarrive);
 
 		return () => {
 			stopExit();

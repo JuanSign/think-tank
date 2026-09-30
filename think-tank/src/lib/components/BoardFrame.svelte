@@ -10,8 +10,14 @@
 
 <style>
 	.board {
+		--merge: 0;
+
 		container-type: inline-size;
 		width: 100%;
+	}
+
+	.board :global([data-cell]) {
+		--paint: 0;
 	}
 
 	.board :global(.cell) {

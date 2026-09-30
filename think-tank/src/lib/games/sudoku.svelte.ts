@@ -20,7 +20,7 @@ export class SudokuGame {
 	puzzle = $state<SudokuPuzzle>();
 	values = $state(CELLS.map(() => 0));
 	notes = $state(CELLS.map(() => 0));
-	selected = $state(0);
+	selected = $state(-1);
 	noting = $state(false);
 	hint = $state<SudokuHint>();
 	frame = $state(0);
@@ -30,6 +30,12 @@ export class SudokuGame {
 	#history = $state<Snapshot[]>([]);
 	#ticket = 0;
 
+	hintStage = $derived.by(() => {
+		const hint = this.hint;
+		if (hint?.kind !== 'steps' || !hint.steps.length) return;
+		const of = hint.steps.length + 1;
+		return { at: Math.min(this.frame + 1, of), of };
+	});
 	canUndo = $derived(this.#history.length > 0);
 	playing = $derived(!!this.puzzle && !this.loading && !this.won && !this.clock.paused);
 	conflicts = $derived(

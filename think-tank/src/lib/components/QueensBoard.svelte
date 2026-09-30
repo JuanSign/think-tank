@@ -2,6 +2,7 @@
 	import { stepFrom } from '$lib/games/grid';
 	import { paintRegions } from '$lib/games/queens-colors';
 	import type { QueensGame } from '$lib/games/queens.svelte';
+	import { joins } from '$lib/games/regions';
 	import BoardFrame from './BoardFrame.svelte';
 	import Crown from './Crown.svelte';
 
@@ -36,24 +37,9 @@
 	let action = $derived(
 		new Set(step ? (step.place !== undefined ? [step.place] : step.eliminate) : [])
 	);
+	let targets = $derived(supposing ? new Set<number>() : action);
 	let knocked = $derived(new Set(supposing ? step?.knocked : []));
 	let mistakes = $derived(new Set(game.hint?.kind === 'mistake' ? game.hint.cells : []));
-
-	function joins(i: number) {
-		if (!regions) return {};
-		const same = (row: number, col: number) =>
-			row >= 0 && row < size && col >= 0 && col < size && regions[row * size + col] === regions[i];
-		const { row, col } = cells[i];
-		const east = same(row, col + 1);
-		const south = same(row + 1, col);
-		return {
-			east,
-			south,
-			west: same(row, col - 1),
-			north: same(row - 1, col),
-			corner: east && south && same(row + 1, col + 1)
-		};
-	}
 
 	function side(index: number) {
 		if (index < seedStart) return -1;
@@ -123,19 +109,19 @@
 <svelte:window {onkeydown} {onpointermove} {onpointerup} onpointercancel={onpointerup} />
 
 <BoardFrame label="Queens board">
-	<div class="cell-grid" class:loading={game.loading} style:--n={size} bind:this={grid}>
+	<div class="cell-grid" style:--n={size} bind:this={grid}>
 		{#each cells as cell, i (i)}
 			{@const mark = game.shown[i]}
 			<button
 				type="button"
 				class={[
 					'cell',
-					joins(i),
+					regions && joins(size, regions, i),
 					{
 						pattern: reason.has(i) && !supposing,
 						squeezed: reason.has(i) && supposing,
 						suppose: supposing && step?.suppose === i,
-						target: action.has(i) && !supposing,
+						target: targets.has(i),
 						conflict: game.conflicts.has(i),
 						mistake: mistakes.has(i)
 					}
@@ -151,6 +137,7 @@
 				onpointerdown={(event) => onpointerdown(event, i)}
 				onclick={(event) => onclick(event, i)}
 			>
+				<span class="line" aria-hidden="true"></span>
 				{#if mark === 'queen'}
 					<svg class="queen" viewBox="0 0 24 24" aria-hidden="true"><Crown /></svg>
 				{:else if supposing && step?.suppose === i}
@@ -176,27 +163,34 @@
 
 <style>
 	.cell-grid {
+		--gap: calc(var(--cell) * var(--gap-ratio));
+		--corner-radius: calc(var(--cell) * var(--radius-ratio));
+		--bend-radius: calc(var(--corner-radius) + var(--gap));
+		--spread: calc((var(--gap) + 1px) * var(--merge));
+		--flat: calc(var(--corner-radius) * (1 - var(--merge)));
+		--hollow: calc(var(--bend-radius) * (1.4143 - 0.4143 * var(--merge)));
+		--divider: color-mix(in srgb, var(--paper-deep) 70%, transparent);
+
 		touch-action: none;
 		user-select: none;
 		-webkit-touch-callout: none;
-		transition: opacity 200ms;
-	}
-
-	.cell-grid.loading {
-		opacity: 0.45;
-		transition-delay: 150ms;
 	}
 
 	.cell-grid > .cell {
-		--seam: 1.5px;
-		--reach: calc(var(--cell) * var(--gap-ratio) - var(--seam));
+		--color: color-mix(
+			in srgb,
+			var(--fill, var(--surface)) calc(var(--paint) * 100%),
+			var(--surface)
+		);
+		--scoop: transparent calc(var(--hollow) - 0.5px), var(--color) calc(var(--hollow) + 0.5px);
+		--tile: calc(var(--bend-radius) + 1px);
 
 		position: relative;
 		display: grid;
 		place-items: center;
 		padding: 0;
 		border: 0;
-		background: var(--fill, var(--surface));
+		background: var(--color);
 		box-shadow:
 			var(--east, 0 0 transparent),
 			var(--south, 0 0 transparent),
@@ -204,35 +198,99 @@
 		color: var(--ink);
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;
-		transition:
-			background-color 200ms,
-			box-shadow 200ms;
+	}
+
+	.cell::after {
+		content: '';
+		position: absolute;
+		inset: calc(var(--bend-radius) * -1);
+		background:
+			var(--bend-nw, none),
+			var(--bend-ne, none),
+			var(--bend-sw, none),
+			var(--bend-se, none);
+		pointer-events: none;
 	}
 
 	.east {
-		--east: var(--reach) 0 var(--fill);
-		border-top-right-radius: 0;
-		border-bottom-right-radius: 0;
+		--east: var(--spread) 0 var(--color);
 	}
 
 	.south {
-		--south: 0 var(--reach) var(--fill);
-		border-bottom-left-radius: 0;
-		border-bottom-right-radius: 0;
+		--south: 0 var(--spread) var(--color);
 	}
 
 	.corner {
-		--corner: var(--reach) var(--reach) var(--fill);
+		--corner: var(--spread) var(--spread) var(--color);
 	}
 
-	.west {
-		border-top-left-radius: 0;
-		border-bottom-left-radius: 0;
+	.flat-nw {
+		border-top-left-radius: var(--flat);
 	}
 
-	.north {
-		border-top-left-radius: 0;
-		border-top-right-radius: 0;
+	.flat-ne {
+		border-top-right-radius: var(--flat);
+	}
+
+	.flat-sw {
+		border-bottom-left-radius: var(--flat);
+	}
+
+	.flat-se {
+		border-bottom-right-radius: var(--flat);
+	}
+
+	.bend-nw {
+		--bend-nw: radial-gradient(circle at 0 0, var(--scoop)) left top / var(--tile) var(--tile)
+			no-repeat;
+	}
+
+	.bend-ne {
+		--bend-ne: radial-gradient(circle at 100% 0, var(--scoop)) right top / var(--tile) var(--tile)
+			no-repeat;
+	}
+
+	.bend-sw {
+		--bend-sw: radial-gradient(circle at 0 100%, var(--scoop)) left bottom / var(--tile)
+			var(--tile) no-repeat;
+	}
+
+	.bend-se {
+		--bend-se: radial-gradient(circle at 100% 100%, var(--scoop)) right bottom / var(--tile)
+			var(--tile) no-repeat;
+	}
+
+	.line {
+		position: absolute;
+		z-index: 1;
+		inset: 0;
+		border: 0 solid var(--divider);
+		opacity: calc(var(--merge) * 2 - 1);
+		pointer-events: none;
+	}
+
+	.line-n .line {
+		top: calc(var(--gap) / -2);
+	}
+
+	.line-e .line {
+		right: calc(var(--gap) / -2);
+	}
+
+	.line-s .line {
+		bottom: calc(var(--gap) / -2);
+	}
+
+	.line-w .line {
+		left: calc(var(--gap) / -2);
+	}
+
+	.east .line {
+		border-right-width: 1px;
+	}
+
+	.south .line {
+		border-bottom-width: 1px;
 	}
 
 	.cell:focus-visible {
@@ -255,31 +313,41 @@
 		animation: glow 1.1s ease-in-out infinite;
 	}
 
-	.pattern {
-		z-index: 1;
-		outline: 3px solid var(--hint);
+	.target::before,
+	.pattern::before,
+	.squeezed::before,
+	.suppose::before,
+	.conflict::before,
+	.mistake::before {
+		content: '';
+		position: absolute;
+		inset: var(--gap);
+		border: 0 solid transparent;
+		border-radius: var(--corner-radius);
+		pointer-events: none;
 	}
 
 	.target::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
 		background: var(--hint);
 		opacity: 0.4;
-		pointer-events: none;
 		animation: beckon 0.9s ease-in-out 4;
+	}
+
+	.pattern::before {
+		border-width: 3px;
+		border-color: var(--hint);
 	}
 
 	.queen,
 	.cross {
 		position: relative;
+		filter: opacity(var(--paint));
 	}
 
-	.squeezed,
-	.suppose {
-		z-index: 1;
-		outline: 3px solid var(--danger);
+	.squeezed::before,
+	.suppose::before {
+		border-width: 3px;
+		border-color: var(--danger);
 	}
 
 	.what-if {
@@ -291,19 +359,18 @@
 		opacity: 1;
 	}
 
-	.conflict {
-		outline: 2px solid var(--danger);
-		outline-offset: -2px;
+	.conflict::before {
+		border-width: 2px;
+		border-color: var(--danger);
 	}
 
 	.conflict .queen {
 		fill: var(--danger);
 	}
 
-	.mistake {
-		z-index: 1;
-		outline: 3px solid var(--danger);
-		outline-offset: -3px;
+	.mistake::before {
+		border-width: 3px;
+		border-color: var(--danger);
 		animation: alarm 0.45s ease-in-out 4;
 	}
 
@@ -330,7 +397,7 @@
 
 	@keyframes alarm {
 		50% {
-			outline-color: transparent;
+			border-color: transparent;
 		}
 	}
 </style>

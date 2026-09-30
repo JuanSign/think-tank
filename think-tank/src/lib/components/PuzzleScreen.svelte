@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import { backOut } from 'svelte/easing';
 	import { scale } from 'svelte/transition';
 	import { page } from '$app/state';
@@ -7,37 +7,72 @@
 	import { fallApart } from '$lib/fall-apart';
 	import type { Clock } from '$lib/games/clock.svelte';
 	import type { Difficulty } from '$lib/puzzles/common';
+	import { revealBoard, type Reveal } from '$lib/reveal';
 	import Icon from './Icon.svelte';
 	import LevelMenu from './LevelMenu.svelte';
 
+	type Game = {
+		clock: Clock;
+		won: boolean;
+		hint: unknown;
+		load: (difficulty: Difficulty) => Promise<void>;
+	};
+
 	let {
 		title,
-		difficulty = $bindable(),
 		rules,
-		clock,
-		won,
-		loading,
-		onnewpuzzle,
+		game,
 		controls,
 		children
 	}: {
 		title: string;
-		difficulty: Difficulty;
 		rules: string;
-		clock: Clock;
-		won: boolean;
-		loading: boolean;
-		onnewpuzzle: () => void;
+		game: Game;
 		controls: Snippet;
 		children: Snippet;
 	} = $props();
 
+	let clock = $derived(game.clock);
+	let won = $derived(game.won);
 	let screen: HTMLElement;
+	let difficulty = $state<Difficulty>('medium');
+	let arrived = $state(false);
+	let ready = $state(false);
 	let settled = $state(false);
+	let reveal: Reveal | undefined;
+	let ticket = 0;
 
 	let time = $derived(format(clock.seconds));
 
 	$effect(() => () => clock.stop());
+
+	$effect(() => () => reveal?.kill());
+
+	$effect(() => {
+		const level = difficulty;
+		untrack(() => refresh(level));
+	});
+
+	$effect(() => {
+		if (arrived && ready) (reveal ??= revealBoard(screen)).show();
+	});
+
+	async function refresh(level: Difficulty) {
+		const current = ++ticket;
+		ready = false;
+		await hideBoard();
+		await game.load(level);
+		if (current === ticket) ready = true;
+	}
+
+	function arrive() {
+		arrived = true;
+	}
+
+	function hideBoard() {
+		game.hint = undefined;
+		return reveal?.hide() ?? Promise.resolve();
+	}
 
 	$effect(() => {
 		if (!won) return;
@@ -69,7 +104,11 @@
 
 <svelte:document onvisibilitychange={clock.sync} />
 
-<div class="screen" bind:this={screen} {@attach enterScreen(page.url.pathname)}>
+<div
+	class="screen"
+	bind:this={screen}
+	{@attach enterScreen(page.url.pathname, { onarrive: arrive, beforeexit: hideBoard })}
+>
 	<div class="container inner">
 		<header class="bar" data-enter>
 			<a class="back" href="/#puzzles">
@@ -116,8 +155,13 @@
 					</div>
 					{#if settled}
 						<div class="again" in:scale={{ start: 0.85, duration: 380, easing: backOut }}>
-							<button type="button" class="button" disabled={loading} onclick={onnewpuzzle}>
-								{loading ? 'Shuffling…' : 'New Puzzle'}
+							<button
+								type="button"
+								class="button"
+								disabled={!ready}
+								onclick={() => refresh(difficulty)}
+							>
+								{ready ? 'New Puzzle' : 'Shuffling…'}
 							</button>
 						</div>
 					{/if}
@@ -202,7 +246,7 @@
 		display: flex;
 		align-items: center;
 		justify-self: end;
-		gap: 0.25rem;
+		gap: 0.75rem;
 		margin-right: -0.6rem;
 	}
 

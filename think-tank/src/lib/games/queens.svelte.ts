@@ -20,6 +20,7 @@ export class QueensGame {
 	#ticket = 0;
 	#stroke: Mark | undefined;
 
+	hintStage = $derived(this.hint?.kind === 'step' ? { at: this.frame + 1, of: 2 } : undefined);
 	canUndo = $derived(this.#history.length > 0);
 	canClear = $derived(this.marks.some((mark) => mark !== 'empty'));
 	playing = $derived(!!this.puzzle && !this.loading && !this.won && !this.clock.paused);

@@ -66,7 +66,7 @@
 <svelte:window {onkeydown} />
 
 <BoardFrame label="Sudoku board">
-	<div class="boxes" class:loading={game.loading} bind:this={grid}>
+	<div class="boxes" bind:this={grid}>
 		{#each nine as box (box)}
 			<div
 				class="box"
@@ -101,7 +101,7 @@
 							onclick={() => game.select(cell)}
 						>
 							{#if value}
-								{value}
+								<span>{value}</span>
 							{:else if revealed && cell === answer?.cell}
 								<span class="ghost" aria-hidden="true">{answer.digit}</span>
 							{:else if game.notes[cell] && !marks.has(cell) && !struck.has(cell)}
@@ -137,25 +137,30 @@
 	.boxes {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 2cqi;
-		transition: opacity 200ms;
-	}
-
-	.boxes.loading {
-		opacity: 0.45;
-		transition-delay: 150ms;
+		gap: 1.2cqi;
+		border-radius: 2cqi;
+		background: color-mix(in srgb, var(--grid-line) calc(var(--merge) * 100%), transparent);
 	}
 
 	.box {
 		container-type: inline-size;
 	}
 
+	.box > .cell-grid {
+		--divider: var(--grid-line);
+
+		gap: calc(var(--cell) * var(--gap-ratio) * (1 - var(--merge)));
+	}
+
 	.cell {
+		--corner-radius: calc(var(--cell) * var(--radius-ratio));
+
 		position: relative;
 		display: grid;
 		place-items: center;
 		padding: 0;
-		border: 0;
+		border: 0 solid color-mix(in srgb, var(--divider) calc(var(--merge) * 100%), transparent);
+		border-radius: calc(var(--corner-radius) * (1 - var(--merge)));
 		color: var(--accent);
 		font-size: calc(var(--cell) * 0.58);
 		font-weight: 600;
@@ -166,6 +171,35 @@
 		transition:
 			background-color 120ms,
 			box-shadow 120ms;
+	}
+
+	.cell:nth-child(3n + 1),
+	.cell:nth-child(3n + 2) {
+		border-right-width: 1px;
+	}
+
+	.cell:nth-child(-n + 6) {
+		border-bottom-width: 1px;
+	}
+
+	.box:nth-child(1) .cell:nth-child(1) {
+		border-top-left-radius: var(--corner-radius);
+	}
+
+	.box:nth-child(3) .cell:nth-child(3) {
+		border-top-right-radius: var(--corner-radius);
+	}
+
+	.box:nth-child(7) .cell:nth-child(7) {
+		border-bottom-left-radius: var(--corner-radius);
+	}
+
+	.box:nth-child(9) .cell:nth-child(9) {
+		border-bottom-right-radius: var(--corner-radius);
+	}
+
+	.cell > * {
+		opacity: var(--paint);
 	}
 
 	.cell:focus-visible {
@@ -179,11 +213,11 @@
 	}
 
 	.cell.peer {
-		background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface));
+		background: color-mix(in srgb, var(--accent) calc(var(--paint) * var(--highlight-peer)), var(--surface));
 	}
 
 	.cell.same {
-		background: var(--accent-soft);
+		background: color-mix(in srgb, var(--accent) calc(var(--paint) * var(--highlight-same)), var(--surface));
 	}
 
 	.cell.area {
@@ -195,8 +229,9 @@
 	}
 
 	.cell.selected {
-		background: var(--accent-soft);
-		box-shadow: inset 0 0 0 2px var(--accent);
+		background: color-mix(in srgb, var(--accent) calc(var(--paint) * var(--highlight-selected)), var(--surface));
+		box-shadow: inset 0 0 0 2px
+			color-mix(in srgb, var(--accent) calc(var(--paint) * 100%), transparent);
 	}
 
 	.cell.target {
