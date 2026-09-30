@@ -4,7 +4,7 @@
 	let { label, children }: { label: string; children: Snippet } = $props();
 </script>
 
-<div class="board" role="img" aria-label={label}>
+<div class="board" role="group" aria-label={label}>
 	{@render children()}
 </div>
 

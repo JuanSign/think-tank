@@ -4,15 +4,19 @@
 	let {
 		icon,
 		label,
-		pressed
+		pressed,
+		disabled = false,
+		onclick
 	}: {
 		icon: IconName;
 		label: string;
 		pressed?: boolean;
+		disabled?: boolean;
+		onclick?: () => void;
 	} = $props();
 </script>
 
-<button type="button" class="tool" aria-pressed={pressed}>
+<button type="button" class="tool" aria-pressed={pressed} {disabled} {onclick}>
 	<Icon name={icon} />
 	<span>{label}</span>
 	{#if pressed !== undefined}
@@ -36,12 +40,18 @@
 		cursor: pointer;
 		transition:
 			background-color 160ms,
-			color 160ms;
+			color 160ms,
+			opacity 160ms;
 	}
 
-	.tool:hover {
+	.tool:hover:not(:disabled) {
 		background: var(--surface);
 		color: var(--ink);
+	}
+
+	.tool:disabled {
+		opacity: 0.4;
+		cursor: default;
 	}
 
 	.tool[aria-pressed='true'] {

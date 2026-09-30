@@ -1,12 +1,24 @@
 <script lang="ts">
+	import type { QueensGame } from '$lib/games/queens.svelte';
 	import Crown from './Crown.svelte';
 	import ToolButton from './ToolButton.svelte';
+
+	let { game }: { game: QueensGame } = $props();
+
+	let hint = $derived(game.hint);
+	let spoken = $derived(!hint ? '' : hint.kind === 'mistake' ? hint.message : hint.step.message);
 </script>
 
 <div class="tools" data-enter>
-	<ToolButton icon="undo" label="Undo" />
-	<ToolButton icon="clear" label="Clear" />
-	<ToolButton icon="hint" label="Hint" />
+	<ToolButton icon="undo" label="Undo" disabled={!game.canUndo} onclick={() => game.undo()} />
+	<ToolButton icon="clear" label="Clear" disabled={!game.canClear} onclick={() => game.clear()} />
+	<ToolButton
+		icon="cross"
+		label="Cross"
+		pressed={game.autoCross}
+		onclick={() => (game.autoCross = !game.autoCross)}
+	/>
+	<ToolButton icon="hint" label="Hint" onclick={() => game.showHint()} />
 </div>
 
 <ul class="legend" aria-label="How to play" data-enter>
@@ -22,10 +34,12 @@
 	</li>
 </ul>
 
+<p class="visually-hidden" aria-live="polite">{spoken}</p>
+
 <style>
 	.tools {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 0.25rem;
 	}
 
@@ -51,7 +65,7 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: var(--radius-s);
-		background: var(--region-2);
+		background: var(--queens-1);
 		color: var(--ink);
 		font-size: 1.25rem;
 		line-height: 1;

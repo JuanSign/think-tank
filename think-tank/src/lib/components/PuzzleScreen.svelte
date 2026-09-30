@@ -1,22 +1,65 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { backOut } from 'svelte/easing';
+	import { scale } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { enterScreen } from '$lib/attachments/enter-screen';
+	import { fallApart } from '$lib/fall-apart';
+	import type { Clock } from '$lib/games/clock.svelte';
+	import type { Difficulty } from '$lib/puzzles/common';
 	import Icon from './Icon.svelte';
+	import LevelMenu from './LevelMenu.svelte';
 
 	let {
 		title,
-		level,
+		difficulty = $bindable(),
 		rules,
+		clock,
+		won,
+		loading,
+		onnewpuzzle,
 		controls,
 		children
 	}: {
 		title: string;
-		level: string;
+		difficulty: Difficulty;
 		rules: string;
+		clock: Clock;
+		won: boolean;
+		loading: boolean;
+		onnewpuzzle: () => void;
 		controls: Snippet;
 		children: Snippet;
 	} = $props();
+
+	let screen: HTMLElement;
+	let settled = $state(false);
+
+	let time = $derived(format(clock.seconds));
+
+	$effect(() => () => clock.stop());
+
+	$effect(() => {
+		if (!won) return;
+		const pieces = [
+			...screen.querySelectorAll<HTMLElement>(
+				'.controls button, .controls li, .status button, .rules'
+			)
+		];
+		const restore = fallApart(pieces, () => (settled = true));
+		return () => {
+			settled = false;
+			restore();
+		};
+	});
+
+	function format(total: number) {
+		const hours = Math.floor(total / 3600);
+		const minutes = Math.floor((total % 3600) / 60);
+		const seconds = String(total % 60).padStart(2, '0');
+		if (!hours) return `${minutes}:${seconds}`;
+		return `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`;
+	}
 </script>
 
 <svelte:head>
@@ -24,7 +67,9 @@
 	<meta name="description" content={rules} />
 </svelte:head>
 
-<div class="screen" {@attach enterScreen(page.url.pathname)}>
+<svelte:document onvisibilitychange={clock.sync} />
+
+<div class="screen" bind:this={screen} {@attach enterScreen(page.url.pathname)}>
 	<div class="container inner">
 		<header class="bar" data-enter>
 			<a class="back" href="/#puzzles">
@@ -34,24 +79,49 @@
 
 			<div class="title">
 				<h1>{title}</h1>
-				<span class="level">{level}</span>
+				<LevelMenu bind:value={difficulty} />
 			</div>
 
 			<div class="status">
-				<span class="timer" aria-label="Time">0:00</span>
-				<button type="button" class="pause" aria-label="Pause">
-					<Icon name="pause" />
+				<span class="timer" aria-label="Time">{time}</span>
+				<button
+					type="button"
+					class="pause"
+					aria-label={clock.paused ? 'Resume' : 'Pause'}
+					disabled={!clock.running}
+					onclick={clock.toggle}
+				>
+					<Icon name={clock.paused ? 'play' : 'pause'} />
 				</button>
 			</div>
 		</header>
 
 		<div class="play">
 			<div class="board-slot">
-				{@render children()}
+				<div class="board-view" class:hidden={clock.paused} inert={clock.paused}>
+					{@render children()}
+				</div>
+				{#if clock.paused}
+					<div class="cover">
+						<p>Paused</p>
+						<button type="button" class="button" onclick={clock.toggle}>Resume</button>
+					</div>
+				{/if}
 			</div>
 
 			<aside class="panel" aria-label="Controls">
-				{@render controls()}
+				<div class="deck">
+					<div class="controls" inert={won || clock.paused}>
+						{@render controls()}
+					</div>
+					{#if settled}
+						<div class="again" in:scale={{ start: 0.85, duration: 380, easing: backOut }}>
+							<button type="button" class="button" disabled={loading} onclick={onnewpuzzle}>
+								{loading ? 'Shuffling…' : 'New Puzzle'}
+							</button>
+						</div>
+					{/if}
+				</div>
 				<p class="rules" data-enter>{rules}</p>
 			</aside>
 		</div>
@@ -61,7 +131,9 @@
 <style>
 	.screen {
 		min-height: 100svh;
+		overflow: clip;
 		background: var(--paper-deep);
+		touch-action: manipulation;
 	}
 
 	.inner {
@@ -72,6 +144,8 @@
 	}
 
 	.bar {
+		position: relative;
+		z-index: 1;
 		display: grid;
 		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
@@ -103,9 +177,14 @@
 	}
 
 	.back:hover,
-	.pause:hover {
+	.pause:hover:not(:disabled) {
 		background: var(--surface);
 		color: var(--ink);
+	}
+
+	.pause:disabled {
+		opacity: 0.4;
+		cursor: default;
 	}
 
 	.title {
@@ -117,12 +196,6 @@
 	h1 {
 		font-size: var(--step-1);
 		letter-spacing: -0.02em;
-	}
-
-	.level {
-		color: var(--ink-soft);
-		font-size: var(--step--1);
-		font-weight: 500;
 	}
 
 	.status {
@@ -148,13 +221,53 @@
 	}
 
 	.board-slot {
+		position: relative;
 		width: min(100%, 36rem);
+	}
+
+	.board-view.hidden {
+		visibility: hidden;
+	}
+
+	.cover {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-content: center;
+		justify-items: center;
+		gap: 1rem;
+		border-radius: var(--radius-l);
+		background: var(--surface);
+	}
+
+	.cover p {
+		font-size: var(--step-2);
+		font-weight: 650;
+		letter-spacing: -0.02em;
 	}
 
 	.panel {
 		display: grid;
 		gap: 1rem;
 		width: min(100%, 36rem);
+	}
+
+	.deck {
+		position: relative;
+		display: grid;
+		gap: inherit;
+	}
+
+	.controls {
+		display: grid;
+		gap: inherit;
+	}
+
+	.again {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-items: center;
 	}
 
 	.rules {
