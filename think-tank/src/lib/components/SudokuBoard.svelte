@@ -9,11 +9,20 @@
 	const nine = Array.from({ length: 9 }, (_, i) => i);
 	const DIGITS = nine.map((i) => i + 1);
 	const CENTER = 4;
+	const CHUNKS = [
+		[1, 2],
+		[2, 1],
+		[1, 3],
+		[3, 1],
+		[2, 2]
+	];
 
 	let grid: HTMLElement;
 
 	const cellAt = (box: number, spot: number) =>
 		(Math.floor(box / 3) * 3 + Math.floor(spot / 3)) * 9 + (box % 3) * 3 + (spot % 3);
+
+	let chunks = $derived(game.puzzle ? carve() : []);
 
 	let steps = $derived(game.hint?.kind === 'steps' ? game.hint.steps : []);
 	let current = $derived(steps[Math.min(game.frame, steps.length - 1)]);
@@ -26,6 +35,37 @@
 	let fresh = $derived(masksOf(current?.eliminate ?? []));
 	let mistakes = $derived(new Set(game.hint?.kind === 'mistake' ? game.hint.cells : []));
 	let chosen = $derived(game.values[game.selected]);
+
+	function carve() {
+		const chunkOf: number[] = [];
+		let next = 0;
+		for (const box of nine) {
+			const taken = new Set<number>();
+			for (const spot of nine) {
+				if (taken.has(spot)) continue;
+				const fits = CHUNKS.map(([rows, cols]) => spotsFrom(spot, rows, cols)).filter(
+					(spots) => spots.length > 0 && spots.every((covered) => !taken.has(covered))
+				);
+				const chosen = fits.length ? fits[Math.floor(Math.random() * fits.length)] : [spot];
+				for (const covered of chosen) {
+					taken.add(covered);
+					chunkOf[cellAt(box, covered)] = next;
+				}
+				next++;
+			}
+		}
+		return chunkOf;
+	}
+
+	function spotsFrom(spot: number, rows: number, cols: number) {
+		const row = Math.floor(spot / 3);
+		const col = spot % 3;
+		if (row + rows > 3 || col + cols > 3) return [];
+		return Array.from(
+			{ length: rows * cols },
+			(_, i) => (row + Math.floor(i / cols)) * 3 + col + (i % cols)
+		);
+	}
 
 	function masksOf(candidates: Candidate[]) {
 		const masks = new Map<number, number>();
@@ -96,7 +136,7 @@
 								}
 							]}
 							data-cell={cell}
-							data-piece={cell}
+							data-piece={chunks[cell]}
 							tabindex={cell === game.selected ? 0 : -1}
 							aria-label={label(cell)}
 							onclick={() => game.select(cell)}

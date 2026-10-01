@@ -40,7 +40,7 @@ export function riseUp(board: HTMLElement) {
 		const length = Math.max(...tracks.map(finish));
 		timeline
 			.add(playback(tracks, length, true), 0)
-			.set(pieces, { clearProps: 'transform,transformOrigin' }, length);
+			.set(pieces, { clearProps: 'transform,transformOrigin,zIndex' }, length);
 		gsap.set(pieces, { clearProps: 'opacity,visibility' });
 	}
 
@@ -55,10 +55,10 @@ function plan(board: HTMLElement) {
 		const key = piece.dataset.piece!;
 		groups.set(key, [...(groups.get(key) ?? []), piece]);
 	}
-	return [...groups.values()].map((members) => track(members, slot));
+	return [...groups.values()].map((members, layer) => track(members, slot, layer + 1));
 }
 
-function track(members: HTMLElement[], slot: DOMRect): Track {
+function track(members: HTMLElement[], slot: DOMRect, layer: number): Track {
 	const rects = members.map((member) => member.getBoundingClientRect());
 	const { center, spread, hull, pin } = measure(rects);
 	const arm = { x: center.x - pin.x, y: center.y - pin.y };
@@ -75,6 +75,7 @@ function track(members: HTMLElement[], slot: DOMRect): Track {
 
 	gsap.set(members, {
 		transformOrigin: (i: number) => `${center.x - rects[i].left}px ${center.y - rects[i].top}px`,
+		zIndex: layer,
 		force3D: true
 	});
 	const setters = members.map((member) => [
