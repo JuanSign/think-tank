@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 
 const HIDE_SPEED = 2;
+export const PAINT = { duration: 0.4, ease: 'power2.out' };
 
 export type Reveal = ReturnType<typeof revealBoard>;
 
@@ -13,8 +14,7 @@ export function revealBoard(screen: HTMLElement) {
 		.timeline({ paused: true })
 		.to(cells, {
 			'--paint': 1,
-			duration: 0.4,
-			ease: 'power2.out',
+			...PAINT,
 			stagger: { grid: 'auto', from: 'center', amount: 0.3 }
 		})
 		.to(board, { '--merge': 1, duration: 0.45, ease: 'power3.inOut' }, '-=0.2');

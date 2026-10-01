@@ -172,7 +172,7 @@
 						<div class="cell-grid mini-queens" style:--n={4}>
 							{#each queensLayout as row, r (r)}
 								{#each [...row] as letter, c (c)}
-									<span style:background="var(--region-{queensRegion[letter]})">
+									<span style:--fill="var(--region-{queensRegion[letter]})">
 										{#if queensColumn[r] === c}
 											<svg viewBox="0 0 24 24">
 												<Crown />
@@ -503,6 +503,8 @@
 	}
 
 	.mini {
+		--paint: 1;
+
 		container-type: inline-size;
 		width: 44%;
 	}
@@ -515,6 +517,7 @@
 
 	.mini-sudoku span {
 		background: var(--surface);
+		color: color-mix(in srgb, var(--ink) calc(var(--paint) * 100%), transparent);
 		font-size: calc(var(--cell) * 0.5);
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
@@ -522,16 +525,22 @@
 	}
 
 	.mini-sudoku .selected {
-		box-shadow: inset 0 0 0 calc(var(--cell) * 0.07) var(--accent);
+		box-shadow: inset 0 0 0 calc(var(--cell) * 0.07)
+			color-mix(in srgb, var(--accent) calc(var(--paint) * 100%), transparent);
 	}
 
 	a.puzzle:hover .mini-sudoku .selected {
-		background: var(--accent);
+		background: color-mix(in srgb, var(--accent) calc(var(--paint) * 100%), var(--surface));
+	}
+
+	.mini-queens span {
+		background: color-mix(in srgb, var(--fill) calc(var(--paint) * 100%), var(--surface));
 	}
 
 	.mini-queens svg {
 		width: 56%;
 		fill: var(--queen);
+		opacity: var(--paint);
 	}
 
 	.mini-empty span {

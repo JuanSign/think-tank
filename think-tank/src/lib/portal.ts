@@ -1,4 +1,6 @@
 import type { OnNavigate } from '@sveltejs/kit';
+import { gsap } from 'gsap';
+import { PAINT } from '$lib/reveal';
 
 const HOME = '/';
 const PUZZLES = ['/sudoku', '/queens'];
@@ -63,7 +65,8 @@ export async function portal(navigation: OnNavigate) {
 
 			if (leaving) {
 				seed = openingFrom(puzzle);
-				if (!seed) root.dataset.portal = 'fade';
+				if (seed) gsap.set(seed, { '--paint': 0 });
+				else root.dataset.portal = 'fade';
 			}
 		});
 
@@ -71,6 +74,7 @@ export async function portal(navigation: OnNavigate) {
 			delete root.dataset.portal;
 			root.style.removeProperty('scroll-behavior');
 			seed?.style.removeProperty('view-transition-name');
+			if (leaving && seed) gsap.to(seed, { '--paint': 1, ...PAINT });
 			arrived();
 		};
 
