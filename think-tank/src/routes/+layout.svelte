@@ -104,6 +104,10 @@
 		addEventListener('scroll', onScroll, { passive: true });
 		for (const type of TAKEOVER) addEventListener(type, end, { passive: true });
 	}
+
+	function keepScrollManual() {
+		history.scrollRestoration = 'manual';
+	}
 </script>
 
 {#snippet joystick()}
@@ -121,7 +125,7 @@
 	</svg>
 {/snippet}
 
-<svelte:window bind:scrollY />
+<svelte:window bind:scrollY onhashchange={keepScrollManual} />
 <svelte:document onclick={spotlightOnJump} />
 
 <svelte:head>
